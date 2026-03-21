@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>ABRI 31 TERMINAL</title>
 
 <style>
@@ -10,41 +10,27 @@
 body{
 background:black;
 color:#11ff15;
-font-family:"Courier New", monospace;
+font-family: "Lucida Console", Monaco, monospace;
 margin:0;
 padding:20px;
-overflow:hidden;
+font-weight:bold;
 }
 
-/* glow */
 .glow{
-text-shadow: 0 0 5px #11ff15, 0 0 10px #11ff15, 0 0 20px #11ff15;
+text-shadow:
+0 0 1px #11ff15,
+0 0 2px #11ff15,
+0 0 5px #11ff15,
+0 0 10px #11ff15;
 }
 
-/* écran centré */
-.center{
-position:absolute;
-top:50%;
-left:50%;
-transform:translate(-50%, -50%);
-text-align:center;
-}
-
-/* input */
-input{
-background:black;
-border:1px solid #11ff15;
-color:#11ff15;
-padding:10px;
-font-size:20px;
-text-align:center;
-}
-
-/* curseur */
+/* curseur UNIQUE */
 .cursor{
 display:inline-block;
 width:10px;
+height:20px;
 background:#11ff15;
+margin-left:5px;
 animation:blink 1s infinite;
 }
 
@@ -54,139 +40,601 @@ animation:blink 1s infinite;
 100%{opacity:1;}
 }
 
-/* contenu caché */
-#content{
-display:none;
-padding-top:20px;
+.item{
+padding:5px;
 }
 
-/* menu */
-.menu a{
-display:block;
-color:#11ff15;
-text-decoration:none;
-margin:5px 0;
-}
-
-.menu a:hover{
+.item.selected{
 background:#11ff15;
 color:black;
+box-shadow:0 0 1px #11ff15,
+0 0 2px #11ff15,
+0 0 5px #11ff15,
+0 0 10px #11ff15;
+text-shadow:0 0 1px black,
+0 0 1px black,
+0 0 3px black,
+0 0 5px black;
 }
 
-/* articles */
-.article{
-margin-top:30px;
-border-left:2px solid #11ff15;
-padding-left:10px;
+button{
+margin-top:20px;
+margin: 10px;
+padding:10px 20px;
+background:#11ff15;
+border:none;
+cursor:pointer;
+box-shadow:0 0 1px #11ff15,
+0 0 2px #11ff15,
+0 0 5px #11ff15,
+0 0 10px #11ff15; 
+color:black;
+font-weight:bold;
+text-shadow:0 0 1px black,
+0 0 1px black,
+0 0 3px black,
+0 0 5px black;
 }
 
-#terminal, #articles{
-    white-space: pre-line;
+#detail{ display:none; }
+
+#terminal, #detail {
+white-space: pre-line;
 }
+
+ #barreDeControl {
+   display: flex;
+   flex-direction: baseline;
+   background-color: gre;
+   position: fixed;      /* fixe la div par rapport à la fenêtre */
+  bottom: 0;            /* colle en bas */
+  left: 0;              /* commence à gauche */
+  width: 100%;          /* prend toute la largeur */
+ 
+  color: #000;          /* texte noir */
+  padding: 10px;
+  text-align: center;
+  z-index: 9999;     
+} 
 
 </style>
-
 </head>
 
-<body>
-
-<!-- écran verrouillé -->
-<div id="lock" class="center glow">
-<p>ABRI 31</p>
-<p>ENTRER CODE D'ACCES</p>
-<input type="password" id="code" maxlength="4">
-<p id="error"></p>
-</div>
-
-<!-- contenu -->
-<div id="content" class="glow">
+<body class="glow">
 
 <div id="terminal"></div>
 
-<div class="menu">
-<p>> MENU</p>
-<a href="#">> Accueil</a>
-<a href="#">> Actualités</a>
-<a href="#">> Risques</a>
-<a href="#">> Protection</a>
-</div>
+<div id="list"></div>
+<div id="barreDeControl">
 
-<div id="articles"></div>
-
+<div id="arrows" style="margin-top:20px;">
+<button onclick="moveUp()">▲</button>
+<button onclick="moveDown()">▼</button>
 </div>
+  
+<button id="executeBtn" onclick="openSelected()">EXECUTER</button>
+  </div>
+<div id="detail"></div>
 
 <script>
 
-// vérification code
-document.getElementById("code").addEventListener("keyup", function(){
-if(this.value === "1234"){
-document.getElementById("lock").style.display = "none";
-document.getElementById("content").style.display = "block";
-startTyping();
-}
-});
+// ==========================
+// DATA (ARBORESCENCE)
+// ==========================
+const articles = [
+  {
+    title: "> Protection",
+    content: "En période de crise mondiale, la préparation individuelle est essentielle. Voici les mesures de base à adopter dès maintenant.",
+    children: [
+      {
+        title: "> Eau & Nourriture",
+        content: "Prévoir un stock minimum de 3 litres d'eau par personne par jour pour au moins 7 jours. Constituer des réserves de nourriture non périssable : conserves, riz, pâtes, légumineuses. Penser aux besoins spécifiques : nourrissons, personnes âgées, animaux domestiques."
+      },
+      {
+        title: "> Équipements d'urgence",
+        content: "Une lampe torche avec piles de rechange, une radio à piles ou à manivelle pour recevoir les alertes officielles, une trousse de premiers secours complète, des bougies et allumettes, une couverture de survie par personne."
+      },
+      {
+        title: "> Documents & Argent",
+        content: "Garder une copie de vos documents importants (carte d'identité, passeport, contrats d'assurance) dans un endroit sécurisé et accessible. Disposer d'une réserve de cash en petites coupures en cas de panne des systèmes bancaires."
+      },
+      {
+        title: "> Plan d'évacuation",
+        content: "Identifier un point de rassemblement avec votre famille. Connaître les itinéraires alternatifs en cas de blocage des routes principales. Avoir un sac à dos d'urgence prêt avec le minimum vital pour 72 heures."
+      },
+      {
+        title: "> Communications",
+        content: "Mémoriser ou noter les numéros d'urgence : 15 (SAMU), 17 (Police), 18 (Pompiers), 112 (Europe). Prévoir un téléphone à batterie longue durée ou une batterie externe chargée. Convenir d'un mot de code famille en cas de danger."
+      }
+    ]
+  },
+  {
+    title: "> Situation mondiale",
+    content: "Au 21 mars 2026, le monde fait face à plus de 130 conflits armés actifs simultanément — un record depuis la Seconde Guerre mondiale. Plus de 204 millions de personnes vivent sous contrôle de groupes armés. Une personne sur huit est directement exposée à la guerre. Les tensions géopolitiques entre grandes puissances atteignent un niveau critique.",
+    children: [
+      {
+        title: "> Bilan humain global",
+        content: "Les conflits actifs dans le monde ont causé en 2025-2026 des pertes humaines colossales.",
+        children: [
+          {
+            title: "> Morts estimés (tous conflits)",
+            content: "On estime à plus de 500 000 le nombre de personnes tuées dans des conflits armés en 2025. Ce chiffre inclut les combattants et les civils. L'Ukraine, le Soudan, Gaza et la RDC concentrent la grande majorité des victimes."
+          },
+          {
+            title: "> Déplacés & Réfugiés",
+            content: "Plus de 120 millions de personnes sont déplacées dans le monde en 2026, un chiffre jamais atteint dans l'histoire moderne. 14 millions au Soudan, plus de 5 millions en RDC, plus de 6 millions d'Ukrainiens en Europe."
+          }
+        ]
+      },
+      {
+        title: "> Chronologie des événements clés",
+        content: "Les dates marquantes qui ont façonné la situation mondiale actuelle.",
+        children: [
+          {
+            title: "> Avril 2023",
+            content: "Début de la guerre civile au Soudan entre l'armée régulière et les Forces de soutien rapide (FSR). Ce conflit deviendra la pire crise humanitaire au monde selon l'ONU."
+          },
+          {
+            title: "> Octobre 2023",
+            content: "Attaque du Hamas sur Israël le 7 octobre, déclenchant une guerre à Gaza qui fera plus de 50 000 morts palestiniens et plongera le Moyen-Orient dans une instabilité durable."
+          },
+          {
+            title: "> Janvier 2025",
+            content: "Le groupe armé M23, soutenu par le Rwanda, s'empare de Goma, capitale économique de l'est de la RDC. Début d'une nouvelle phase d'escalade dans la région des Grands Lacs."
+          },
+          {
+            title: "> Février 2025",
+            content: "Donald Trump reprend la présidence des États-Unis. Il promet la paix en Ukraine et au Moyen-Orient, mais son imprévisibilité redessine l'ordre mondial. Il annonce une vente d'armes de 11 milliards de dollars à Taïwan."
+          },
+          {
+            title: "> 28 Février 2026",
+            content: "Lancement de l'opération militaire conjointe américano-israélienne contre l'Iran. Opération Lion rugissant côté israélien, Opération Fureur épique côté américain. L'ayatollah Khamenei est tué dans les premières heures. Le monde retient son souffle."
+          },
+          {
+            title: "> 1er Mars 2026",
+            content: "Le Hezbollah attaque Israël depuis le Liban, ouvrant un second front. Israël répond par des bombardements massifs sur le sud du Liban et des opérations terrestres. Au Soudan, 169 personnes sont massacrées dans la région de Ruweng."
+          },
+          {
+            title: "> 19 Mars 2026",
+            content: "Nétanyahou déclare qu'Israël gagne la guerre et qu'elle se terminera plus tôt que prévu. L'Iran dément toute incapacité militaire et lance une nouvelle série de missiles sur le centre d'Israël."
+          },
+          {
+            title: "> 21 Mars 2026 — Aujourd'hui",
+            content: "Jour 22 du conflit Israël-USA-Iran. Les combats se poursuivent sur plusieurs fronts simultanés. Le détroit d'Ormuz reste fermé. En Ukraine, des frappes massives russes sont enregistrées. Le monde est au bord d'une guerre généralisée."
+          }
+        ]
+      },
+      {
+        title: "> Russie",
+        content: "La Russie est engagée dans une guerre totale contre l'Ukraine depuis février 2022 et demeure la principale source de déstabilisation en Europe.",
+        children: [
+          {
+            title: "> Situation militaire",
+            content: "Les forces russes maintiennent une pression constante sur les fronts de Soumy, Kharkiv, Lyman, Siversk et Zaporijjia. Des frappes massives combinant missiles balistiques, drones Shahed et artillerie lourde frappent régulièrement les villes ukrainiennes. En mars 2026, une frappe qualifiée de massive a tué plusieurs civils et blessé des dizaines de personnes."
+          },
+          {
+            title: "> Bilan du conflit ukrainien",
+            content: "Depuis février 2022, on estime à plus de 400 000 le nombre de soldats tués ou blessés des deux côtés. Plus de 10 000 civils ukrainiens confirmés tués, le chiffre réel étant probablement bien supérieur. Plus de 6 millions d'Ukrainiens sont réfugiés en Europe."
+          },
+          {
+            title: "> Diplomatie & Négociations",
+            content: "Des émissaires russes ont tenu une réunion avec des négociateurs américains en Floride mi-mars 2026. Poutine exige la reconnaissance de la Crimée et du Donbass comme territoires russes et planifie l'installation de 140 000 citoyens russes dans les zones occupées. Zelensky refuse toute cession territoriale. Les négociations sont dans l'impasse."
+          },
+          {
+            title: "> Arsenaux nucléaires",
+            content: "La Russie dispose du plus grand arsenal nucléaire au monde avec environ 6 000 ogives, dont 1 500 déployées opérationnellement. Moscou a évoqué à plusieurs reprises la doctrine nucléaire en réponse au soutien occidental à l'Ukraine, maintenant une pression psychologique constante sur les capitales européennes."
+          }
+        ]
+      },
+      {
+        title: "> États-Unis",
+        content: "Les États-Unis jouent un rôle central et souvent contradictoire dans l'équilibre mondial sous la présidence Trump, engagés militairement en Iran tout en cherchant à se désengager d'Ukraine.",
+        children: [
+          {
+            title: "> Engagement au Moyen-Orient",
+            content: "Les États-Unis participent activement aux frappes contre l'Iran depuis le 28 février 2026 via l'Opération Fureur épique. 13 militaires américains ont été tués dans des frappes de représailles iraniennes dans la région du Golfe. Des bases américaines à Bahreïn, Qatar, Émirats et Koweït sont sous pression constante."
+          },
+          {
+            title: "> Position sur l'Ukraine",
+            content: "Sous Trump, le soutien américain à l'Ukraine est devenu conditionnel et imprévisible. Les États-Unis ont réduit leurs livraisons d'armes et poussent à des négociations de paix rapides, au grand dam de Kiev et de l'Europe. Washington exerce une pression simultanée sur Moscou et Kyiv pour parvenir à un accord."
+          },
+          {
+            title: "> Tensions avec la Chine",
+            content: "La vente d'armes de 11 milliards de dollars à Taïwan annoncée en 2025 a provoqué les plus grandes manœuvres militaires chinoises autour de l'île depuis des décennies. Les relations sino-américaines sont au plus bas, avec une guerre commerciale et technologique en pleine escalade."
+          },
+          {
+            title: "> Opinion publique américaine",
+            content: "59 % des Américains désapprouvent les frappes contre l'Iran selon les derniers sondages. La société américaine est profondément divisée sur le rôle de leur pays dans les conflits mondiaux, avec une fatigue guerrière croissante depuis les guerres d'Irak et d'Afghanistan."
+          }
+        ]
+      },
+      {
+        title: "> Chine",
+        content: "La Chine étend son influence économique et militaire à l'échelle mondiale, tout en restant officiellement en dehors des conflits armés directs. Elle constitue néanmoins la principale puissance de déstabilisation potentielle à long terme.",
+        children: [
+          {
+            title: "> Taïwan — La menace principale",
+            content: "La Chine maintient une pression militaire constante sur Taïwan via des incursions répétées dans la zone d'identification de défense aérienne et des manœuvres navales d'encerclement. En réponse à la vente d'armes américaine, Pékin a organisé des exercices militaires simulant un blocus total de l'île."
+          },
+          {
+            title: "> Soutien à la Russie",
+            content: "La Chine n'a jamais condamné l'invasion russe de l'Ukraine. Elle maintient des relations économiques étroites avec Moscou, lui fournissant des biens à double usage civil et militaire malgré les sanctions occidentales. Ce partenariat stratégique inquiète profondément les capitales européennes."
+          },
+          {
+            title: "> Mer de Chine méridionale",
+            content: "La Chine poursuit sa politique d'affirmation en mer de Chine méridionale, multipliant les incidents avec les Philippines, le Vietnam et la Malaisie. Des îles artificielles militarisées servent de bases avancées pour projeter sa puissance navale vers le Pacifique."
+          },
+          {
+            title: "> Arsenal militaire",
+            content: "La Chine dispose d'environ 500 ogives nucléaires et modernise rapidement son arsenal. Son budget militaire dépasse désormais 300 milliards de dollars annuels. L'Armée populaire de libération est la plus grande force militaire du monde en nombre de soldats avec 2 millions d'actifs."
+          }
+        ]
+      },
+      {
+        title: "> Iran",
+        content: "L'Iran est depuis le 28 février 2026 en guerre ouverte contre Israël et les États-Unis, un conflit qui redessine l'ensemble de l'architecture sécuritaire du Moyen-Orient.",
+        children: [
+          {
+            title: "> Le conflit en cours",
+            content: "Depuis le 28 février 2026 et le début des frappes américano-israéliennes, l'Iran riposte par des salves de missiles balistiques contre Israël et les bases américaines du Golfe. Des explosions ont été rapportées à Riyad, Abou Dhabi, Doha, Dubaï, Koweït et Manama. La guerre entre dans son 22e jour ce 21 mars."
+          },
+          {
+            title: "> La mort de Khamenei",
+            content: "L'ayatollah Ali Khamenei, Guide suprême de l'Iran depuis 1989, a été tué lors des premières frappes israélo-américaines le 28 février 2026. Son fils Mojtaba Khamenei lui a succédé dans l'urgence. Ce changement au sommet du pouvoir crée une instabilité inédite au sein du régime et rend l'issue du conflit encore plus imprévisible."
+          },
+          {
+            title: "> Fermeture du détroit d'Ormuz",
+            content: "L'Iran a procédé à la fermeture de facto du détroit d'Ormuz, par lequel transitent normalement 20 % des approvisionnements mondiaux en pétrole et en gaz naturel liquéfié. Cette décision provoque une flambée des prix de l'énergie à l'échelle mondiale et menace les économies de nombreux pays importateurs."
+          },
+          {
+            title: "> Capacités nucléaires",
+            content: "L'un des objectifs déclarés de l'opération américano-israélienne était d'éliminer les capacités d'enrichissement d'uranium de l'Iran. Nétanyahou affirme que cet objectif est atteint. Téhéran dément. La communauté internationale et les agences de renseignement tentent d'évaluer l'état réel des installations nucléaires iraniennes."
+          },
+          {
+            title: "> Proxies régionaux",
+            content: "L'Iran s'appuie sur un réseau de groupes alliés pour frapper Israël et les intérêts américains : le Hezbollah au Liban, les Houthis au Yémen et diverses milices en Irak. Ces acteurs ouvrent des fronts multiples qui compliquent la gestion du conflit et élargissent la zone de guerre."
+          }
+        ]
+      },
+      {
+        title: "> RDC — Congo",
+        content: "La République Démocratique du Congo est le théâtre d'un conflit chronique et sous-médiatisé, alimenté par des rivalités régionales et la convoitise sur ses ressources minières stratégiques.",
+        children: [
+          {
+            title: "> Situation actuelle",
+            content: "Le groupe armé M23, soutenu par le Rwanda, contrôle Goma depuis janvier 2025. Des frappes de drones ont frappé la ville en mars 2026, tuant notamment une humanitaire française de l'Unicef. Plus de 5 millions de personnes sont déplacées à travers le pays. Malgré un accord de paix signé fin 2025, les combats se poursuivent."
+          },
+          {
+            title: "> Les minerais de la guerre",
+            content: "La RDC concentre 60 à 80 % des réserves mondiales de cobalt et 80 % du coltan, deux ressources indispensables aux batteries des véhicules électriques et aux téléphones. Cette richesse est au cœur du conflit, avec une compétition féroce entre les États-Unis, la Chine et l'Europe pour sécuriser ces approvisionnements vitaux pour la transition énergétique."
+          },
+          {
+            title: "> Bilan humain",
+            content: "Depuis la reprise des combats en 2022, on estime à plusieurs dizaines de milliers le nombre de morts. Les violences sexuelles sont utilisées comme arme de guerre à grande échelle. L'est du Congo est l'une des régions les plus dangereuses au monde pour les civils et les humanitaires."
+          },
+          {
+            title: "> Réactions internationales",
+            content: "Les États-Unis ont sanctionné les Forces de défense rwandaises en mars 2026 pour leur soutien au M23, exigeant un retrait immédiat. L'Union africaine et l'ONU peinent à imposer un cessez-le-feu durable. La communauté internationale reste largement focalisée sur les crises ukrainienne et moyen-orientale."
+          }
+        ]
+      },
+      {
+        title: "> Soudan",
+        content: "La guerre civile soudanaise est qualifiée par l'ONU de pire crise humanitaire au monde, dans une indifférence quasi totale de la communauté internationale.",
+        children: [
+          {
+            title: "> Origine du conflit",
+            content: "La guerre a éclaté en avril 2023 entre l'armée régulière soudanaise et les Forces de soutien rapide (FSR), un groupe paramilitaire dirigé par le général Hemedti. Ce qui devait être un affrontement interne s'est transformé en conflit total ravageant l'ensemble du pays."
+          },
+          {
+            title: "> Bilan humain",
+            content: "Plus de 40 000 morts confirmés depuis le début du conflit, le chiffre réel étant probablement plusieurs fois supérieur en raison de l'inaccessibilité des zones de combat. Près de 14 millions de personnes déplacées, dont une grande partie fuit vers le Tchad, l'Égypte et la Libye. Des famines sont déclarées dans plusieurs régions."
+          },
+          {
+            title: "> Massacres de mars 2026",
+            content: "Le 1er mars 2026, au moins 169 personnes ont été tuées lors de massacres intercommunautaires dans la région administrative spéciale de Ruweng. Ces violences s'inscrivent dans un schéma de nettoyage ethnique documenté par plusieurs ONG et rapporteurs spéciaux de l'ONU."
+          },
+          {
+            title: "> Risque de régionalisation",
+            content: "L'Érythrée soutient ouvertement l'armée régulière soudanaise, tandis que l'Éthiopie, fragilisée par ses propres tensions internes post-guerre du Tigré, tente de maintenir une neutralité difficile. Le risque d'embrasement régional dans la Corne de l'Afrique est réel et croissant."
+          }
+        ]
+      },
+      {
+        title: "> Asie — Les poudrières silencieuses",
+        content: "Au-delà du Moyen-Orient et de l'Europe, plusieurs foyers de tension en Asie pourraient déclencher les prochains grands conflits mondiaux.",
+        children: [
+          {
+            title: "> Taïwan",
+            content: "La Chine maintient une pression militaire constante avec des incursions régulières dans l'espace aérien taïwanais et des exercices navals d'encerclement. La vente d'armes américaine de 11 milliards de dollars a déclenché les plus grandes manœuvres militaires chinoises depuis des décennies. Un incident aérien ou naval pourrait à tout moment dégénérer en conflit ouvert entre les deux premières puissances mondiales."
+          },
+          {
+            title: "> Myanmar",
+            content: "La guerre civile birmane, déclenchée par le coup d'État militaire de février 2021, se poursuit sans perspective de résolution. Les forces de résistance (PDF) et les groupes ethniques armés contrôlent désormais plus de 50 % du territoire national. La junte répond par des bombardements aériens indiscriminés sur les populations civiles."
+          },
+          {
+            title: "> Inde-Pakistan",
+            content: "Les deux puissances nucléaires maintiennent une confrontation permanente au Cachemire. Des incidents armés réguliers le long de la Ligne de contrôle font des morts des deux côtés. Une escalade entre les deux pays, qui possèdent ensemble environ 300 ogives nucléaires, représente l'un des scénarios les plus catastrophiques possibles."
+          },
+          {
+            title: "> Corée du Nord",
+            content: "La Corée du Nord a procédé à plusieurs essais de missiles balistiques intercontinentaux en 2025-2026 et est suspectée d'avoir fourni des munitions et du matériel militaire à la Russie en Ukraine. Son programme nucléaire continue de progresser malgré les sanctions internationales, avec un arsenal estimé entre 40 et 60 ogives."
+          }
+        ]
+      },
+      {
+        title: "> Évaluation du risque de guerre mondiale",
+        content: "Une analyse synthétique des risques d'embrasement global au 21 mars 2026.",
+        children: [
+          {
+            title: "> Risque CRITIQUE — Moyen-Orient",
+            content: "Le conflit Israël-USA-Iran est le foyer le plus dangereux du moment. La fermeture du détroit d'Ormuz affecte l'économie mondiale. Les frappes iraniennes sur les pays du Golfe pourraient entraîner ces derniers dans le conflit. Une frappe sur une installation nucléaire israélienne ou américaine représenterait un point de non-retour."
+          },
+          {
+            title: "> Risque ÉLEVÉ — Europe",
+            content: "La guerre en Ukraine entre dans sa cinquième année sans issue diplomatique visible. La coopération nucléaire défensive franco-allemande, inédite depuis la création de l'OTAN, témoigne du niveau d'inquiétude des capitales européennes. Une frappe russe sur un pays de l'OTAN, même accidentelle, déclencherait l'article 5 et entraînerait une guerre directe avec la Russie."
+          },
+          {
+            title: "> Risque MODÉRÉ-ÉLEVÉ — Asie-Pacifique",
+            content: "Un incident autour de Taïwan reste le scénario le plus susceptible de déclencher un conflit entre les deux premières puissances mondiales. Ni Washington ni Pékin ne souhaitent une guerre ouverte, mais la multiplication des provocations croisées augmente le risque d'escalade non intentionnelle."
+          },
+          {
+            title: "> Risque CHRONIQUE — Afrique",
+            content: "La RDC et le Soudan concentrent les crises humanitaires les plus graves au monde dans une quasi-indifférence internationale. Ces foyers de violence alimentent les flux migratoires, le terrorisme transfrontalier et l'instabilité régionale. Leur résolution n'est à l'agenda d'aucune grande puissance."
+          }
+        ]
+      }
+    ]
+  }
+];
 
-// texte terminal
+
+// intro
 const intro = `
 INITIALISATION...
+
 ACCES AUTORISE
+ABRI 31 - TERMINAL CENTRAL
 
-BIENVENUE DANS L'ABRI 31
+------------------------
 
-MISSION :
-SURVEILLANCE MONDIALE
-ANALYSE DES MENACES
-PROTECTION DES POPULATIONS
+SELECTIONNER UN DOSSIER
 
+------------------------
 `;
 
-const articles = `
-> SITUATION MONDIALE
-Les tensions internationales restent élevées entre grandes puissances.
+// ==========================
+// VARIABLES
+// ==========================
+let selectedIndex = 0;
+let currentList = articles;
+let history = [];
+let listInitialized = false;
+let inArticle = false;
 
-> RISQUE DE GUERRE MONDIALE
-Le risque dépend fortement des décisions politiques et militaires.
+// ==========================
+// CURSEUR GLOBAL
+// ==========================
+const cursor = document.createElement("span");
+cursor.className = "cursor";
 
-> RISQUE NUCLEAIRE
-Les armes existent toujours. La dissuasion reste active.
-
-> PROTECTION
-Prévoir eau, nourriture, lampe, radio et suivre les consignes officielles.
-
-`;
-
-let i = 0;
-let j = 0;
-
+// ==========================
+// MACHINE A ECRIRE
+// ==========================
 function typeText(text, element, speed, callback){
-let index = 0;
+let i = 0;
 
 function write(){
-if(index < text.length){
-element.innerHTML += text.charAt(index);
-index++;
+if(i < text.length){
+element.innerHTML = text.substring(0, i);
+element.appendChild(cursor);
+i++;
 setTimeout(write, speed);
-}else if(callback){
-callback();
+}else{
+element.innerHTML = text;
+if(callback) callback();
 }
 }
+
 write();
 }
 
-function startTyping(){
+// ==========================
+// CREATION LISTE
+// ==========================
+function initList(){
 
-const terminal = document.getElementById("terminal");
-const art = document.getElementById("articles");
+const list = document.getElementById("list");
+list.innerHTML = "";
+listInitialized = false;
 
-// intro
-typeText(intro, terminal, 25, function(){
+let index = 0;
 
-// articles après
-typeText(articles, art, 20);
+function typeItem(){
+
+if(index < currentList.length){
+
+const div = document.createElement("div");
+div.classList.add("item");
+
+list.appendChild(div);
+
+typeText(currentList[index].title, div, 20, function(){
+index++;
+typeItem();
+});
+
+}else{
+listInitialized = true;
+updateSelection();
+}
+
+}
+
+typeItem();
+}
+
+// ==========================
+// SELECTION
+// ==========================
+function updateSelection(){
+
+const items = document.querySelectorAll(".item");
+
+items.forEach((item, i) => {
+
+item.classList.remove("selected");
+
+if(i === selectedIndex){
+item.classList.add("selected");
+item.appendChild(cursor);
+}
 
 });
 
 }
+
+// ==========================
+// NAVIGATION
+// ==========================
+function moveUp(){
+if(!listInitialized || inArticle) return;
+
+if(selectedIndex > 0){
+selectedIndex--;
+updateSelection();
+}
+}
+
+function moveDown(){
+if(!listInitialized || inArticle) return;
+
+if(selectedIndex < currentList.length - 1){
+selectedIndex++;
+updateSelection();
+}
+}
+
+// ==========================
+// OUVERTURE
+// ==========================
+function openSelected(){
+if(inArticle) return;
+openArticle(selectedIndex);
+}
+
+function openArticle(index){
+
+const item = currentList[index];
+
+// 🔹 SI DOSSIER
+if(item.children){
+history.push(currentList);
+currentList = item.children;
+selectedIndex = 0;
+initList();
+return;
+}
+
+// 🔹 SINON ARTICLE
+inArticle = true;
+
+document.getElementById("list").style.display = "none";
+document.getElementById("executeBtn").style.display = "none";
+document.getElementById("arrows").style.display = "none";
+
+const detail = document.getElementById("detail");
+detail.style.display = "block";
+detail.innerHTML = "";
+
+typeText(
+item.title + "\n\n" + item.content,
+detail,
+20,
+function(){
+detail.innerHTML += `<br><br><button onclick="back()">RETOUR</button>`;
+}
+);
+
+}
+
+// ==========================
+// RETOUR
+// ==========================
+function initList(){
+
+    const list = document.getElementById("list");
+    list.innerHTML = "";
+    listInitialized = false;
+
+    let index = 0;
+
+    function typeItem(){
+
+        if(index < currentList.length){
+
+            const div = document.createElement("div");
+            div.classList.add("item");
+
+            list.appendChild(div);
+
+            typeText(currentList[index].title, div, 20, function(){
+                index++;
+                typeItem();
+            });
+
+        } else {
+            listInitialized = true;
+            updateSelection();
+
+            // 🔹 Ajout du bouton retour pour chaque menu
+            if(history.length > 0){ // seulement si on n’est pas au menu principal
+                const backBtn = document.createElement("button");
+                backBtn.innerText = "RETOUR";
+                backBtn.onclick = back;
+                backBtn.style.display = "block";
+                backBtn.style.marginTop = "10px";
+                list.appendChild(backBtn);
+            }
+        }
+
+    }
+
+    typeItem();
+}
+  
+  
+  
+  
+  
+function back(){
+
+// 🔹 SI ARTICLE → revenir au dossier actuel
+if(inArticle){
+inArticle = false;
+
+document.getElementById("detail").style.display = "none";
+document.getElementById("list").style.display = "block";
+document.getElementById("executeBtn").style.display = "block";
+document.getElementById("arrows").style.display = "block";
+
+updateSelection();
+return;
+}
+
+// 🔹 SI MENU → remonter d’un niveau
+if(history.length > 0){
+currentList = history.pop();
+selectedIndex = 0;
+initList();
+}
+
+}
+
+// ==========================
+// LANCEMENT
+// ==========================
+typeText(intro, document.getElementById("terminal"), 25, initList);
 
 </script>
 
