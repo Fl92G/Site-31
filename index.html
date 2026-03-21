@@ -3,21 +3,41 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Abri 31 - Terminal</title>
+<title>ABRI 31 TERMINAL</title>
 
 <style>
 
 body{
 background:black;
 color:#11ff15;
-font-family: "Courier New", monospace;
+font-family:"Courier New", monospace;
 margin:0;
 padding:20px;
+overflow:hidden;
 }
 
-/* effet glow */
+/* glow */
 .glow{
 text-shadow: 0 0 5px #11ff15, 0 0 10px #11ff15, 0 0 20px #11ff15;
+}
+
+/* écran centré */
+.center{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%, -50%);
+text-align:center;
+}
+
+/* input */
+input{
+background:black;
+border:1px solid #11ff15;
+color:#11ff15;
+padding:10px;
+font-size:20px;
+text-align:center;
 }
 
 /* curseur */
@@ -25,7 +45,6 @@ text-shadow: 0 0 5px #11ff15, 0 0 10px #11ff15, 0 0 20px #11ff15;
 display:inline-block;
 width:10px;
 background:#11ff15;
-margin-left:5px;
 animation:blink 1s infinite;
 }
 
@@ -35,11 +54,13 @@ animation:blink 1s infinite;
 100%{opacity:1;}
 }
 
-/* menu */
-.menu{
-margin-bottom:30px;
+/* contenu caché */
+#content{
+display:none;
+padding-top:20px;
 }
 
+/* menu */
 .menu a{
 display:block;
 color:#11ff15;
@@ -65,65 +86,103 @@ padding-left:10px;
 
 <body>
 
-<div id="terminal" class="glow"></div><span class="cursor"></span>
+<!-- écran verrouillé -->
+<div id="lock" class="center glow">
+<p>_</p>
+<p>ENTRER CODE D'ACCES</p>
+<input type="password" id="code" maxlength="4">
+<p id="error"></p>
+</div>
 
-<div class="menu glow">
+<!-- contenu -->
+<div id="content" class="glow">
+
+<div id="terminal"></div>
+
+<div class="menu">
 <p>> MENU</p>
 <a href="#">> Accueil</a>
 <a href="#">> Actualités</a>
-<a href="#">> Risques globaux</a>
+<a href="#">> Risques</a>
 <a href="#">> Protection</a>
 </div>
 
-<div class="article glow">
-<h3>> Situation mondiale</h3>
-<p>Les tensions internationales restent élevées entre plusieurs grandes puissances. Les conflits régionaux peuvent avoir des impacts globaux.</p>
-</div>
+<div id="articles"></div>
 
-<div class="article glow">
-<h3>> Risque de guerre mondiale</h3>
-<p>Les experts considèrent que le risque existe, mais il dépend de nombreux facteurs diplomatiques, économiques et militaires.</p>
-</div>
-
-<div class="article glow">
-<h3>> Risque nucléaire</h3>
-<p>Les arsenaux nucléaires existent toujours. La dissuasion reste un facteur majeur de stabilité, mais le risque zéro n'existe pas.</p>
-</div>
-
-<div class="article glow">
-<h3>> Se préparer</h3>
-<p>Il est conseillé de rester informé, d’avoir des réserves de base (eau, nourriture, lampe), et de suivre les consignes officielles en cas de crise.</p>
 </div>
 
 <script>
 
-const text = `
-INITIALISATION DU TERMINAL...
-CONNEXION AU SYSTEME ABRI 31...
+// vérification code
+document.getElementById("code").addEventListener("keyup", function(){
+if(this.value === "1234"){
+document.getElementById("lock").style.display = "none";
+document.getElementById("content").style.display = "block";
+startTyping();
+}
+});
 
-BIENVENUE OPERATEUR
-SYSTEME ACTIF
+// texte terminal
+const intro = `
+INITIALISATION...
+ACCES AUTORISE
+
+BIENVENUE DANS L'ABRI 31
 
 MISSION :
-SURVEILLER LES RISQUES MONDIAUX
-PROTEGER LA POPULATION
-ANALYSER LES MENACES
+SURVEILLANCE MONDIALE
+ANALYSE DES MENACES
+PROTECTION DES POPULATIONS
 
-ACCES AU MENU DISPONIBLE
+`;
+
+const articles = `
+> SITUATION MONDIALE
+Les tensions internationales restent élevées entre grandes puissances.
+
+> RISQUE DE GUERRE MONDIALE
+Le risque dépend fortement des décisions politiques et militaires.
+
+> RISQUE NUCLEAIRE
+Les armes existent toujours. La dissuasion reste active.
+
+> PROTECTION
+Prévoir eau, nourriture, lampe, radio et suivre les consignes officielles.
+
 `;
 
 let i = 0;
-const speed = 30;
+let j = 0;
 
-function typeWriter(){
-if(i < text.length){
-document.getElementById("terminal").innerHTML += text.charAt(i);
-i++;
-setTimeout(typeWriter, speed);
+function typeText(text, element, speed, callback){
+let index = 0;
+
+function write(){
+if(index < text.length){
+element.innerHTML += text.charAt(index);
+index++;
+setTimeout(write, speed);
+}else if(callback){
+callback();
 }
 }
+write();
+}
 
-typeWriter();
+function startTyping(){
+
+const terminal = document.getElementById("terminal");
+const art = document.getElementById("articles");
+
+// intro
+typeText(intro, terminal, 25, function(){
+
+// articles après
+typeText(articles, art, 20);
+
+});
+
+}
 
 </script>
 
