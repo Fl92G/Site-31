@@ -2,335 +2,58 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=0.7, maximum-scale=1, user-scalable=no">
-
-<title>ABRI 31 TERMINAL</title>
+<title>Terminal Fallout</title>
 
 <style>
+:root{
+  --green:#00ff88;
+}
 
 body {
-  background: black;
-  color: #00ff88;
+  margin: 0;
+  height: 100vh;
+  background-color: #000;
+  color: var(--green);
   font-family: monospace;
-  text-shadow:0 0 10px #00ff88;
-}
+  overflow: hidden;
+  position: relative;
 
-/* Curseur */
-.cursor{
-  display:inline-block;
-  width:10px;
-  height:20px;
-  background:#00ff88;
-  margin-left:5px;
-  animation:blink 1s infinite;
-}
-
-@keyframes blink{
-  0%{opacity:1;}
-  50%{opacity:0;}
-  100%{opacity:1;}
-}
-
-/* Liste */
-.item{
-  padding:5px;
-}
-
-.item.selected{
-  background:#00ff88;
-  color:black;
-  box-shadow:
-    0 0 5px #00ff88,
-    0 0 10px #00ff88;
-}
-
-/* CONTROLES A DROITE */
-#barreDeControl {
-  position: fixed;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 15px;
-
-  z-index: 9999;
-}
-
-/* Molette */
-#wheel {
-  display: flex;
-  flex-direction: column;
-  border: 2px solid #00ff88;
-  box-shadow:
-    0 0 5px #00ff88,
-    inset 0 0 5px #00ff88;
-  padding: 10px;
-}
-
-#wheel button {
-  margin: 5px 0;
-}
-
-/* STYLE BOUTONS FALLOUT */
-button {
-  padding:10px;
-  background:#00ff88;
-  border:none;
-  color:black;
-  font-weight:bold;
-  cursor:pointer;
-  box-shadow:
-    0 0 2px #00ff88,
-    0 0 5px #00ff88,
-    0 0 10px #00ff88;
+  /* léger glow global */
   text-shadow:
-    0 0 1px black,
-    0 0 3px black;
+    0 0 2px var(--green),
+    0 0 5px var(--green);
 }
 
-/* effet appui */
-button:active {
-  transform: scale(0.9);
-  box-shadow: inset 0 0 10px #00ff88;
+/* lignes vertes CRT */
+body::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+
+  background: repeating-linear-gradient(
+    rgba(0, 255, 136, 0.12) 0px,
+    rgba(0, 255, 136, 0.12) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+
+  animation: scanline 0.4s linear infinite;
 }
 
-/* tailles boutons */
-#executeBtn, #backBtn {
-  width: 120px;
+/* effet scintillement */
+@keyframes scanline {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 3px; }
 }
-
-/* RETOUR désactivé */
-#backBtn.disabled {
-  opacity: 0.2;
-  box-shadow: none;
-  cursor: default;
-}
-
-/* RETOUR actif (glow) */
-#backBtn.active {
-  box-shadow:
-    0 0 5px #00ff88,
-    0 0 15px #00ff88,
-    0 0 25px #00ff88;
-}
-
-#detail{ display:none; }
-
-#terminal, #detail {
-  white-space: pre-line;
-}
-
 </style>
+
 </head>
 
 <body>
-
-<div id="terminal"></div>
-<div id="list"></div>
-
-<div id="barreDeControl">
-  <div id="wheel">
-    <button onclick="moveUp()">▲</button>
-    <button onclick="moveDown()">▼</button>
-  </div>
-
-  <button id="executeBtn" onclick="openSelected()">EXECUTER</button>
-  <button id="backBtn" class="disabled" onclick="back()">RETOUR</button>
-</div>
-
-<div id="detail"></div>
-
-<script>
-
-// ================= DATA =================
-const articles = [
-  {
-    title: "> Protection",
-    children: [
-      { title: "> Eau & Nourriture", content: "Stock eau et nourriture." },
-      { title: "> Équipements", content: "Lampe, radio, trousse secours." }
-    ]
-  },
-  {
-    title: "> Situation mondiale",
-    children: [
-      { title: "> Russie", content: "Conflit en Ukraine." },
-      { title: "> USA", content: "Tensions internationales." }
-    ]
-  }
-];
-
-// ================= INTRO =================
-const intro = `
-INITIALISATION...
-
-ACCES AUTORISE
-ABRI 31 TERMINAL
-
-------------------------
-SELECTIONNER UN DOSSIER
-------------------------
-`;
-
-// ================= VARIABLES =================
-let selectedIndex = 0;
-let currentList = articles;
-let history = [];
-let inArticle = false;
-
-const cursor = document.createElement("span");
-cursor.className = "cursor";
-
-// ================= MACHINE A ECRIRE =================
-function typeText(text, element, speed, callback){
-  let i = 0;
-
-  function write(){
-    if(i < text.length){
-      element.innerHTML = text.substring(0, i);
-      element.appendChild(cursor);
-      i++;
-      setTimeout(write, speed);
-    }else{
-      element.innerHTML = text;
-      if(callback) callback();
-    }
-  }
-
-  write();
-}
-
-// ================= LIST =================
-function initList(){
-
-  const list = document.getElementById("list");
-  list.innerHTML = "";
-
-  currentList.forEach((item, i) => {
-    const div = document.createElement("div");
-    div.classList.add("item");
-    div.innerText = item.title;
-    list.appendChild(div);
-  });
-
-  updateSelection();
-  updateBackButton();
-}
-
-// ================= SELECTION =================
-function updateSelection(){
-  const items = document.querySelectorAll(".item");
-
-  items.forEach((item, i) => {
-    item.classList.remove("selected");
-
-    if(i === selectedIndex){
-      item.classList.add("selected");
-      item.appendChild(cursor);
-    }
-  });
-}
-
-// ================= NAV =================
-function moveUp(){
-  if(inArticle) return;
-  if(selectedIndex > 0){
-    selectedIndex--;
-    updateSelection();
-  }
-}
-
-function moveDown(){
-  if(inArticle) return;
-  if(selectedIndex < currentList.length - 1){
-    selectedIndex++;
-    updateSelection();
-  }
-}
-
-// ================= OPEN =================
-function openSelected(){
-  if(inArticle) return;
-  openArticle(selectedIndex);
-}
-
-function openArticle(index){
-
-  const item = currentList[index];
-
-  // dossier
-  if(item.children){
-    history.push(currentList);
-    currentList = item.children;
-    selectedIndex = 0;
-    initList();
-    return;
-  }
-
-  // article
-  inArticle = true;
-
-  document.getElementById("list").style.display = "none";
-  document.getElementById("barreDeControl").style.display = "flex";
-
-  const detail = document.getElementById("detail");
-  detail.style.display = "block";
-
-  typeText(
-    item.title + "\n\n" + item.content,
-    detail,
-    20,
-    () => {}
-  );
-
-  updateBackButton();
-}
-
-// ================= BACK =================
-function back(){
-
-  if(inArticle){
-    inArticle = false;
-
-    document.getElementById("detail").style.display = "none";
-    document.getElementById("list").style.display = "block";
-
-    updateSelection();
-    updateBackButton();
-    return;
-  }
-
-  if(history.length > 0){
-    currentList = history.pop();
-    selectedIndex = 0;
-    initList();
-  }
-
-  updateBackButton();
-}
-
-// ================= BOUTON RETOUR =================
-function updateBackButton(){
-  const btn = document.getElementById("backBtn");
-
-  if(inArticle || history.length > 0){
-    btn.classList.remove("disabled");
-    btn.classList.add("active");
-  }else{
-    btn.classList.remove("active");
-    btn.classList.add("disabled");
-  }
-}
-
-// ================= START =================
-typeText(intro, document.getElementById("terminal"), 25, function(){
-  initList();
-});
-
-</script>
-
+<h1>Bienvenue sur mon terminal Fallout</h1>
+<p>Le style CRT est appliqué avec des lignes vertes et un fond noir.</p>
 </body>
 </html>
